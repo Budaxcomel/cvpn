@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# ─────────────────────────────────────────────────────────────
+# Semakan kebenaran langganan (remote whitelist)
+# ─────────────────────────────────────────────────────────────
+PERM_LIB="/opt/connectifyvpn/lib/permission.sh"
+if [[ -f "$PERM_LIB" ]]; then
+  # shellcheck disable=SC1090
+  source "$PERM_LIB"
+  permission_check_or_exit "/opt/connectifyvpn"
+else
+  echo "Ralat: fail permission.sh tidak dijumpai. Sila jalankan installer dahulu."
+  exit 1
+fi
+
+# //====================================================
+# //	System Request:Debian 9+/Ubuntu 18.04+/20+
+# //	Author:	Budaxcomel
+# //	Dscription: Xray Menu Management
+# //	email: admin@connectifyvpn.com
+# //  telegram: https://t.me/abgdinur
+# //====================================================
+Green="\e[92;1m"
+RED="\033[31m"
+NC='\033[0m'
+OR='\033[1;93m'
+CITY=$(cat /etc/xray/city)
+PUB=$(cat /etc/slowdns/server.pub)
+NS=$(cat /etc/xray/dns)
+domain=$(cat /etc/xray/domain)
+clear
+
+echo -e "  ${OR}──────────────────────────────────────${NC}"
+printf "\e[1;92m     .::.\e[0m\e[1;77m Delete Vless Account \e[1;92m.::.\e[0m\n"
+echo -e "  ${OR}──────────────────────────────────────${NC}"
+echo ""
+NUMBER_OF_CLIENTS=$(grep -c -E "^### " "/etc/vless/.vless.db")
+if [[ ${NUMBER_OF_CLIENTS} == '0' ]]; then
+    echo ""
+    echo "  No customer name available"
+    echo ""
+    exit 0
+fi
+echo ""
+echo "     NO  USERNAME     EXPIRED"
+echo "     ------------------------"
+grep -E "^### " "/etc/vless/.vless.db" | cut -d ' ' -f 2-3 | column -t | nl -s ') '
+until [[ ${CLIENT_NUMBER} -ge 1 && ${CLIENT_NUMBER} -le ${NUMBER_OF_CLIENTS} ]]; do
+    if [[ ${CLIENT_NUMBER} == '1' ]]; then
+        read -rp "Select one client [1]: " CLIENT_NUMBER
+    else
+        echo ""
+        until [[ $CLIENT_NUMBER =~ ^[0-9]+$ ]]; do
+            read -rp "     Select one client [1-${NUMBER_OF_CLIENTS}]: " CLIENT_NUMBER
+        done
+        user=$(grep -E "^### " "/etc/vless/.vless.db" | cut -d ' ' -f 2 | sed -n "${CLIENT_NUMBER}"p)
+        exp=$(grep -E "^### " "/etc/vless/.vless.db" | cut -d ' ' -f 3 | sed -n "${CLIENT_NUMBER}"p)
+        sed -i "/^#& $user $exp/,/^},{/d" /etc/xray/config.json
+        sed -i "/^### $user $exp/d" /etc/vless/.vless.db
+        rm /etc/xray/log-create-${user}.log
+        systemctl restart xray >/dev/null 2>&1
+        clear
+        echo "-----------------------------------------------"
+        echo -e "Delete vless Account Username ${grenbo}$user${NC} Successfully"
+        echo -e "account has been permanently deleted"
+        echo "-----------------------------------------------"
+        echo ""
+        exit
+    fi
+done

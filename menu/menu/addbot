@@ -1,0 +1,101 @@
+#!/bin/bash
+set -euo pipefail
+
+# ─────────────────────────────────────────────────────────────
+# Semakan kebenaran langganan (remote whitelist)
+# ─────────────────────────────────────────────────────────────
+PERM_LIB="/opt/connectifyvpn/lib/permission.sh"
+if [[ -f "$PERM_LIB" ]]; then
+  # shellcheck disable=SC1090
+  source "$PERM_LIB"
+  permission_check_or_exit "/opt/connectifyvpn"
+else
+  echo "Ralat: fail permission.sh tidak dijumpai. Sila jalankan installer dahulu."
+  exit 1
+fi
+
+# ─────────────────────────────────────────────────────────────
+# Pasang Telegram Admin Bot (adminbot)
+# ─────────────────────────────────────────────────────────────
+NS="$(cat /etc/xray/dns 2>/dev/null || true)"
+PUB="$(cat /etc/slowdns/server.pub 2>/dev/null || true)"
+domain="$(cat /etc/xray/domain 2>/dev/null || true)"
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "          PASANG BOT PANEL (TELEGRAM)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Anda perlukan:"
+echo "  1) Bot Token dari @BotFather"
+echo "  2) ID Telegram (contoh: dapatkan dari @MissRose_bot -> /id)"
+echo "  3) Telegram API ID & API HASH (ambil dari https://my.telegram.org)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+read -r -p "Bot Token : " bottoken
+read -r -p "ID Telegram Admin : " admin
+read -r -p "Telegram API ID : " api_id
+read -r -p "Telegram API HASH : " api_hash
+
+# Pastikan dependencies
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y >/dev/null 2>&1 || true
+apt-get install -y python3 python3-pip git unzip curl >/dev/null 2>&1 || true
+
+# Salin fail bot dari repo lokal (elak download dari repo luar)
+if [[ ! -d /opt/connectifyvpn/botmin/adminbot ]]; then
+  echo "Ralat: folder /opt/connectifyvpn/botmin/adminbot tidak dijumpai."
+  echo "Pastikan ConnectifyVPN sudah dipasang dengan betul."
+  exit 1
+fi
+
+rm -rf /usr/bin/adminbot
+mkdir -p /usr/bin
+cp -a /opt/connectifyvpn/botmin/adminbot /usr/bin/adminbot
+
+# Install Python requirements
+pip3 install -r /usr/bin/adminbot/requirements.txt >/dev/null 2>&1 || true
+
+uuid="$(tr </dev/urandom -dc a-z | head -c15)"
+
+cat >/usr/bin/adminbot/var.txt <<EOF
+BOT_TOKEN="${bottoken}"
+ADMIN="${admin}"
+API_ID="${api_id}"
+API_HASH="${api_hash}"
+TG_SESSION="connectifyvpn"
+DOMAIN="${domain}"
+PUB="${PUB}"
+HOST="${NS}"
+SESSIONS="${uuid}"
+USER1=""
+USER2=""
+USER3=""
+USER4=""
+USER5=""
+USER6=""
+USER7=""
+USER8=""
+USER9=""
+USER10=""
+EOF
+
+cat > /etc/systemd/system/adminbot.service <<'END'
+[Unit]
+Description=ConnectifyVPN - Telegram Admin Bot
+After=network.target
+
+[Service]
+WorkingDirectory=/usr/bin
+ExecStart=python3 -m adminbot
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+END
+
+systemctl daemon-reload
+systemctl enable --now adminbot >/dev/null 2>&1 || true
+systemctl restart adminbot >/dev/null 2>&1 || true
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ Bot adminbot berjaya dipasang."
+echo "Semak status: systemctl status adminbot"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

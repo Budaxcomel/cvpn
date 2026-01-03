@@ -1,0 +1,67 @@
+#!/bin/bash
+set -euo pipefail
+
+# ─────────────────────────────────────────────────────────────
+# Semakan kebenaran langganan (remote whitelist)
+# ─────────────────────────────────────────────────────────────
+PERM_LIB="/opt/connectifyvpn/lib/permission.sh"
+if [[ -f "$PERM_LIB" ]]; then
+  # shellcheck disable=SC1090
+  source "$PERM_LIB"
+  permission_check_or_exit "/opt/connectifyvpn"
+else
+  echo "Ralat: fail permission.sh tidak dijumpai. Sila jalankan installer dahulu."
+  exit 1
+fi
+
+if [[ ! -d /usr/bin/adminbot ]]; then
+  echo "Ralat: adminbot belum dipasang."
+  echo "Sila jalankan menu: addbot"
+  exit 1
+fi
+
+NS="$(cat /etc/xray/dns 2>/dev/null || true)"
+PUB="$(cat /etc/slowdns/server.pub 2>/dev/null || true)"
+domain="$(cat /etc/xray/domain 2>/dev/null || true)"
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "      KEMAS KINI KONFIG BOT (ADMINBOT)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+read -r -p "Bot Token : " bottoken
+read -r -p "ID Telegram Admin : " admin
+read -r -p "Telegram API ID : " api_id
+read -r -p "Telegram API HASH : " api_hash
+
+uuid="$(tr </dev/urandom -dc a-z | head -c15)"
+
+# Reset database/session supaya bot re-auth dengan config baru
+rm -f /usr/bin/adminbot/database.db
+rm -f /usr/bin/connectifyvpn.session
+
+cat >/usr/bin/adminbot/var.txt <<EOF
+BOT_TOKEN="${bottoken}"
+ADMIN="${admin}"
+API_ID="${api_id}"
+API_HASH="${api_hash}"
+TG_SESSION="connectifyvpn"
+DOMAIN="${domain}"
+PUB="${PUB}"
+HOST="${NS}"
+SESSIONS="${uuid}"
+USER1=""
+USER2=""
+USER3=""
+USER4=""
+USER5=""
+USER6=""
+USER7=""
+USER8=""
+USER9=""
+USER10=""
+EOF
+
+systemctl daemon-reload >/dev/null 2>&1 || true
+systemctl restart adminbot >/dev/null 2>&1 || true
+systemctl enable adminbot >/dev/null 2>&1 || true
+
+echo "✅ Konfigurasi adminbot telah dikemas kini."

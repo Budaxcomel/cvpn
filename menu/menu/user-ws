@@ -1,0 +1,69 @@
+#!/bin/bash
+
+# ─────────────────────────────────────────────────────────────
+# Semakan kebenaran langganan (remote whitelist)
+# ─────────────────────────────────────────────────────────────
+PERM_LIB="/opt/connectifyvpn/lib/permission.sh"
+if [[ -f "$PERM_LIB" ]]; then
+  # shellcheck disable=SC1090
+  source "$PERM_LIB"
+  permission_check_or_exit "/opt/connectifyvpn"
+else
+  echo "Ralat: fail permission.sh tidak dijumpai. Sila jalankan installer dahulu."
+  exit 1
+fi
+
+# Edition : Stable Edition V3.0
+# Auther  : Budaxcomel
+# (C) Copyright 2023
+# =========================================
+#!/bin/bash
+NC='[0m'
+DEFBOLD='[39;1m'
+RB='[31;1m'
+GB='[32;1m'
+YB='[33;1m'
+BB='[34;1m'
+MB='[35;1m'
+CB='[35;1m'
+WB='[37;1m'
+RED='[0;31m'
+NC='[0m'
+GREEN='[0;32m'
+ORANGE='[0;33m'
+BLUE='[0;34m'
+PURPLE='[0;35m'
+CYAN='[0;36m'
+LIGHT='[0;37m'
+clear
+NUMBER_OF_CLIENTS=$(grep -c -E "^### " "/etc/xray/config.json")
+if [[ ${NUMBER_OF_CLIENTS} == '0' ]]; then
+clear
+echo -e "[1;36m┌━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┐[0m"
+echo -e " [1;97;101m           DETAIL VMESS ACCOUNT         [0m"
+echo -e "[1;36m└━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┘[0m"
+echo -e "  ${YB} Data Vmess Tidak Ada Bang...${NC}"
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+read -n 1 -s -r -p "Press any key to back on menu"
+m-vmess
+fi
+clear
+echo -e "[1;36m┌━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┐[0m"
+echo -e " [1;97;101m           DETAIL VMESS ACCOUNT          [0m"
+echo -e "[1;36m└━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┘[0m"
+echo -e " ${YB}Nickname  Exp${NC}  "
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+grep -E "^### " "/etc/xray/config.json" | cut -d ' ' -f 2-3 | column -t | sort | uniq
+echo ""
+echo -e "${YB}tap enter to go back${NC}"
+echo -e "[1;36m┌━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┐[0m"
+echo -e "  [1;97;101m        SCRIPT BY             [0m"
+echo -e "[1;36m└━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┘[0m"
+read -rp "Ketik Usernamenya : " user
+clear
+echo ""
+cat /etc/xray/log-create-$user.log
+echo ""
+read -n 1 -s -r -p "Press any key to back on menu"
+m-vmess

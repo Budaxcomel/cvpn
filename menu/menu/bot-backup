@@ -1,0 +1,77 @@
+#!/bin/bash
+
+# ─────────────────────────────────────────────────────────────
+# Semakan kebenaran langganan (remote whitelist)
+# ─────────────────────────────────────────────────────────────
+PERM_LIB="/opt/connectifyvpn/lib/permission.sh"
+if [[ -f "$PERM_LIB" ]]; then
+  # shellcheck disable=SC1090
+  source "$PERM_LIB"
+  permission_check_or_exit "/opt/connectifyvpn"
+else
+  echo "Ralat: fail permission.sh tidak dijumpai. Sila jalankan installer dahulu."
+  exit 1
+fi
+
+# //====================================================
+# //	System Request:Debian 9+/Ubuntu 18.04+/20+
+# //	Author:	Budaxcomel
+# //	Dscription: Xray Menu Management
+# //	email: admin@connectifyvpn.com
+# //  telegram: https://t.me/abgdinur
+# //====================================================
+# // font color configuration | MYRIDWAN AUTOSCRIPT
+red() { echo -e "\\033[32;1m${*}\\033[0m"; }
+IP=$(curl -s ipv4.icanhazip.com)
+HOST="$(cat /etc/xray/domain)"
+DATEVPS=$(date +"%d-%B-%Y")
+ISPVPS=$(cat /etc/xray/isp)
+CITY=$(cat /etc/xray/city)
+GREEN="\e[92;1m"
+BLUE="\033[36m"
+RED='\033[0;31m'
+NC='\033[0m'
+function BACKUPVPS() {
+rm -rf /root/backup
+mkdir /root/backup
+cp /etc/passwd backup/
+cp /etc/group backup/
+cp /etc/shadow backup/
+cp /etc/gshadow backup/
+cp /etc/crontab backup/
+cp -r /var/lib/connectifyvpn/ backup/connectifyvpn 
+cp -r /etc/xray backup/xray
+cp -r /var/www/html/ backup/html
+cd /root
+zip -r $IP-$DATEVPS.zip backup > /dev/null 2>&1
+rclone copy /root/$IP-$DATEVPS.zip dr:backup/
+url=$(rclone link dr:backup/$IP-$DATEVPS.zip)
+id=(`echo $url | grep '^https' | cut -d'=' -f2`)
+link="https://drive.google.com/u/4/uc?id=${id}&export=download"
+rm -rf backup
+rm -rf $IP-$DATEVPSVPS.zip
+echo "
+_______________________________________
+SUCCESSFULL BACKUP YOUR VPS
+Please Save The Following Data
+_______________________________________
+YOUR VPS IP : $IP
+DOMAIN      : $HOST
+DATE        : $DATEVPS
+LINK BACKUP : $link
+_______________________________________
+© Hak Cipta Oleh CONNECTIFYVPN
+    " | mail -s "ConnectifyVPN Tunnel Backup" $EMAIL
+    echo -e "━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo -e "SUCCESSFULL BACKUP YOUR VPS"
+    echo -e "Please Save The Following Data"
+    echo -e "━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo -e "Your VPS IP : $IP"
+    echo -e "DOMAIN      : $HOST"
+    echo -e "DATE        : $DATEVPS"
+    echo -e "LINK BACKUP : $link"
+    echo -e "━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo -e "Please Check your Email backup file"
+
+}
+BACKUPVPS

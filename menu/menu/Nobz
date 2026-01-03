@@ -1,0 +1,190 @@
+#!/bin/bash
+
+# ─────────────────────────────────────────────────────────────
+# Semakan kebenaran langganan (remote whitelist)
+# ─────────────────────────────────────────────────────────────
+PERM_LIB="/opt/connectifyvpn/lib/permission.sh"
+if [[ -f "$PERM_LIB" ]]; then
+  # shellcheck disable=SC1090
+  source "$PERM_LIB"
+  permission_check_or_exit "/opt/connectifyvpn"
+else
+  echo "Ralat: fail permission.sh tidak dijumpai. Sila jalankan installer dahulu."
+  exit 1
+fi
+
+
+addn() {
+domain=$(cat /etc/xray/domain)
+clear
+echo -e "
+====================
+Add Account NoobzVPN
+===================="
+read -p "Username  : " user
+read -p "Password  : " pass
+read -p "Masa Aktif: " masaaktif
+clear
+noobzvpns --add-user "$user" "$pass"
+noobzvpns --expired-user "$username" "$masaaktif"
+expi=`date -d "$masaaktif days" +"%Y-%m-%d"`
+echo "### ${user} ${expi}" >>/etc/funny/.noob
+
+cat >/var/www/html/NobzVPN-$user.txt <<END
+
+================
+NoobzVPN Account
+================
+Hostname  : $domain
+Username  : $user
+Password  : $pass
+Expired       : $expi
+================
+TCP_STD/HTTP  : 80
+TCP_SSL/HTTPS : 443
+================
+
+END
+
+clear
+echo -e ""
+echo -e "───────────────────────────" | tee -a /etc/xray/log-createNobzVPN-${user}.log
+echo -e " Premium NoobzVPN Account  " | tee -a /etc/xray/log-createNobzVPN-${user}.log
+echo -e "───────────────────────────" | tee -a /etc/xray/log-createNobzVPN-${user}.log
+echo -e " Hostname               : $domain " | tee -a /etc/xray/log-createNobzVPN-${user}.log
+echo -e " Username               : $user" | tee -a /etc/xray/log-createNobzVPN-${user}.log
+echo -e " Password                : $pass" | tee -a /etc/xray/log-createNobzVPN-${user}.log
+echo -e " ───────────────────────────" | tee -a /etc/xray/log-createNobzVPN-${user}.log
+echo -e " TCP_STD/HTTP     : 80" | tee -a /etc/xray/log-createNobzVPN-${user}.log
+echo -e " TCP_SSL/HTTPS   : 443" | tee -a /etc/xray/log-createNobzVPN-${user}.log
+echo -e " ───────────────────────────" | tee -a /etc/xray/log-createNobzVPN-${user}.log
+echo -e " Link Account           : https://$domain:81/NobzVPN-$user.txt" | tee -a /etc/xray/log-createNobzVPN-${user}.log
+echo -e "───────────────────────────" | tee -a /etc/xray/log-createNobzVPN-${user}.log
+echo -e " Expired On               : $xpi " | tee -a /etc/xray/log-createNobzVPN-${user}.log
+
+}
+
+deln() {
+mna=$(grep -e "^### " "/etc/funny/.noob" | cut -d ' ' -f 2-3 | column -t | sort | uniq)
+clear
+echo "
+==============
+Delete Account
+==============
+$mna
+=============
+"
+read -p "Input Name: " name
+if [ -z $name ]; then
+menu
+else
+exp=$(grep -we "^### $user" "/funny/.noob" | cut -d ' ' -f 3 | sort | uniq)
+sed -i "/^### $user $exp/,/^},{/d" /etc/funny/.noob
+noobzvpns --remove-user "$name"
+clear
+echo "
+===============
+Username Delete
+===============
+
+User: $name
+Exp : $xpi
+===============
+"
+fi
+}
+
+list() {
+clear
+noobzvpns --info-all-user
+}
+
+lock(){
+clear
+mna=$(grep -e "^### " "/etc/funny/.noob" | cut -d ' ' -f 2-3 | column -t | sort | uniq)
+clear
+echo "
+==============
+Block Account
+==============
+$mna
+=============
+"
+read -p "Input Name: " name
+if [ -z $name ]; then
+menu
+else
+exp=$(grep -we "^### $user" "/funny/.noob" | cut -d ' ' -f 3 | sort | uniq)
+sed -i "/^### $user $exp/,/^},{/d" /etc/funny/.noob
+noobzvpns --block-user "$name"
+clear
+echo "
+===============
+Username Block
+===============
+
+User: $name
+Exp : $xpi
+===============
+"
+fi
+}
+unlock(){
+clear
+mna=$(grep -e "^### " "/etc/funny/.noob" | cut -d ' ' -f 2-3 | column -t | sort | uniq)
+clear
+echo "
+==============
+Unblock Account
+==============
+$mna
+=============
+"
+read -p "Input Name: " name
+if [ -z $name ]; then
+menu
+else
+exp=$(grep -we "^### $user" "/funny/.noob" | cut -d ' ' -f 3 | sort | uniq)
+sed -i "/^### $user $exp/,/^},{/d" /etc/funny/.noob
+noobzvpns --unblock-user "$name"
+clear
+echo "
+===============
+Username Unblock
+===============
+
+User: $name
+Exp : $xpi
+===============
+"
+fi
+}
+
+tampilan() {
+clear
+echo "
+=========================
+[ <== NOOBZVPN MENJ ==> ]
+=========================
+
+1. Add Account
+2. Delete Account
+3. List Active Account
+4. Block Account
+5. Unblock Account
+=========================
+Preess X, To Menu
+=========================
+"
+read -p "Input Option: " inrere
+case $inrere in
+1|01) clear ; addn ;;
+2|02) clear ; deln ;;
+3|03) clear ; list ;;
+4|04) clear ; lock ;;
+5|05) clear ; unlock ;;
+x|X) clear ; menu ;;
+*) echo "Wrong Number " ; tampilan ;;
+esac
+}
+tampilan

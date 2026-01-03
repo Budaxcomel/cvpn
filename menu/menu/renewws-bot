@@ -1,0 +1,131 @@
+#!/bin/bash
+
+# ─────────────────────────────────────────────────────────────
+# Semakan kebenaran langganan (remote whitelist)
+# ─────────────────────────────────────────────────────────────
+PERM_LIB="/opt/connectifyvpn/lib/permission.sh"
+if [[ -f "$PERM_LIB" ]]; then
+  # shellcheck disable=SC1090
+  source "$PERM_LIB"
+  permission_check_or_exit "/opt/connectifyvpn"
+else
+  echo "Ralat: fail permission.sh tidak dijumpai. Sila jalankan installer dahulu."
+  exit 1
+fi
+
+# ConnectifyVPN - Renew VMESS WS account
+
+RED='\033[0;31m'
+NC='\033[0m'
+Green='\033[0;32m'
+Yellow='\033[0;33m'
+
+CONFIG_JSON="/etc/xray/config.json"
+DB_VMESS="/etc/vmess/.vmess.db"
+
+clear
+
+if [[ ! -f "$CONFIG_JSON" ]]; then
+  echo -e "${RED}Xray config not found: $CONFIG_JSON${NC}"
+  exit 1
+fi
+
+NUMBER_OF_CLIENTS=$(grep -c -E '^### ' "$CONFIG_JSON" 2>/dev/null || true)
+if [[ "${NUMBER_OF_CLIENTS}" == "0" ]]; then
+  echo -e "${RED}You have no existing VMESS users!${NC}"
+  read -n 1 -s -r -p "Press any key to back to menu"
+  echo
+  menu
+  exit 0
+fi
+
+echo -e "${Green}Select an existing VMESS user:${NC}"
+echo "--------------------------------------"
+grep -E '^### ' "$CONFIG_JSON" | awk '{print $2, $3}' | column -t | sort -u
+echo "--------------------------------------"
+read -rp "Username (blank to cancel): " user
+
+if [[ -z "$user" ]]; then
+  menu
+  exit 0
+fi
+
+# Validate user exists
+exp_line=$(grep -m 1 -wE "^###\s+${user}\s" "$CONFIG_JSON" || true)
+if [[ -z "$exp_line" ]]; then
+  echo -e "${RED}User not found in config: $user${NC}"
+  read -n 1 -s -r -p "Press any key to back to menu"
+  echo
+  menu
+  exit 0
+fi
+
+old_exp=$(echo "$exp_line" | awk '{print $3}')
+echo "Current expiry: $old_exp"
+
+read -rp "Extend how many days? " masaaktif
+if ! [[ "$masaaktif" =~ ^[0-9]+$ ]]; then
+  echo -e "${RED}Invalid number of days.${NC}"
+  read -n 1 -s -r -p "Press any key to back to menu"
+  echo
+  menu
+  exit 0
+fi
+
+now_epoch=$(date +%s)
+old_epoch=$(date -d "$old_exp" +%s 2>/dev/null || echo 0)
+
+# If already expired, extend from today
+base_epoch=$old_epoch
+if [[ "$old_epoch" -lt "$now_epoch" ]]; then
+  base_epoch=$now_epoch
+fi
+
+new_epoch=$((base_epoch + masaaktif*86400))
+new_exp=$(date -d "@$new_epoch" +%Y-%m-%d)
+
+# Update config.json marker line
+# Replace the first matching marker line for this user
+tmpfile=$(mktemp)
+updated=0
+while IFS= read -r line; do
+  if [[ $updated -eq 0 && "$line" =~ ^###\ ${user}\  ]]; then
+    echo "### $user $new_exp" >> "$tmpfile"
+    updated=1
+  else
+    echo "$line" >> "$tmpfile"
+  fi
+done < "$CONFIG_JSON"
+cat "$tmpfile" > "$CONFIG_JSON"
+rm -f "$tmpfile"
+
+# Update vmess db if present
+if [[ -f "$DB_VMESS" ]]; then
+  uuid=$(grep -m 1 -wE "^###\s+${user}\s" "$DB_VMESS" | awk '{print $4}' || true)
+  if [[ -n "$uuid" ]]; then
+    tmpdb=$(mktemp)
+    updated=0
+    while IFS= read -r line; do
+      if [[ $updated -eq 0 && "$line" =~ ^###\ ${user}\  ]]; then
+        echo "### $user $new_exp $uuid" >> "$tmpdb"
+        updated=1
+      else
+        echo "$line" >> "$tmpdb"
+      fi
+    done < "$DB_VMESS"
+    cat "$tmpdb" > "$DB_VMESS"
+    rm -f "$tmpdb"
+  fi
+fi
+
+systemctl restart xray >/dev/null 2>&1 || systemctl restart xray.service >/dev/null 2>&1 || true
+
+echo ""
+echo -e "${Green}Done!${NC}"
+echo "Username : $user"
+echo "Old Exp  : $old_exp"
+echo "New Exp  : $new_exp"
+echo ""
+read -n 1 -s -r -p "Press any key to back to menu"
+echo
+menu
