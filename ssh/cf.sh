@@ -1,6 +1,6 @@
 #!/bin/bash
 # Edition : Stable Edition V3.0
-# Auther  : ConnectifyVPN Store
+# Auther  : Budaxcomel
 # (C) Copyright 2023
 # =========================================
 #!/bin/bash
@@ -85,7 +85,8 @@ RESULT=$(curl -sLX PUT "https://api.cloudflare.com/client/v4/zones/${ZONE}/dns_r
      -H "Content-Type: application/json" \
      --data '{"type":"A","name":"'${SUB_DOMAIN}'","content":"'${IP}'","ttl":120,"proxied":false}')
 echo "Host : $SUB_DOMAIN"
-echo "IP=" >> /var/lib/kyt/ipvps.conf
+mkdir -p /var/lib/connectifyvpn
+echo "IP=$SUB_DOMAIN" > /var/lib/connectifyvpn/ipvps.conf
 echo $SUB_DOMAIN > /root/domain
 echo $SUB_DOMAIN > /etc/xray/domain
 rm -f /root/f1.sh
@@ -93,8 +94,6 @@ rm -f /root/f1.sh
 function notif_addhost() {
     green "Notif AddHost Tele"
     sleep 2
-    CHATID="6050202923"
-    KEY="6006599143:AAEgstCAioq35JgX97HaW_G3TAkLKzLZS_w"
     TIME="10"
 TEXT="
 <code>â”â”â”â”â”â”â”â”â”â”â”â”â”â”</code>
@@ -111,7 +110,6 @@ curl -s --max-time $TIME -d "chat_id=$CHATID&disable_web_page_preview=1&text=$TE
 }
 function pointing(){
 ns_domain_cloudflare1
-notif_addhost
 
 echo -e "Done Record Domain= ${SUB_DOMAIN} For VPS"
 sleep 1
