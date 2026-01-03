@@ -150,7 +150,7 @@ sts="${Info}"
 echo -e "\e[32mloading...\e[0m"
 clear
 # REPO    
-    REPO="https://raw.githubusercontent.com/Budaxcomel/connectifyvpn/main/"
+    REPO="https://raw.githubusercontent.com/Budaxcomel/cvpn/main/"
     #REPOKU="https://connectifyvpn.me/"
 
 ####
@@ -277,7 +277,7 @@ function nginx_install() {
 function base_package() {
     clear
     ########
-    print_install "Menginstall Packet Yang Dibutuhkan"
+    print_install "Menginstall Package Yang Diperlukan"
     apt install zip pwgen openssl netcat socat cron bash-completion -y
     apt install figlet -y
     apt update -y
